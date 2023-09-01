@@ -77,6 +77,7 @@ class VisionTransformer(nn.Module):
     def __init__(self, input_res: int, patch_size: int, width: int, layers: int, heads: int, output_dim: int):
         super().__init__()
         ##TODO: we can train different vit for two images, or use one to encode both; or freeze vit
+        # change below accordingly
         self.ori_vit1 = Encoder(width, layers, heads, patch_size, input_res)
         self.ori_vit2 = Encoder(width, layers, heads, patch_size, input_res)
         
@@ -105,15 +106,23 @@ class VisionTransformer(nn.Module):
         enc2_output = self.ori_vit2(p2)  #LND
         out1 = self.attn1(enc2_output, enc1_output, enc1_output, need_weights=False, attn_mask=None)[0]
         out1 = self.mlp1(self.ln_1(out1))
+        out1 = out1.permute(1, 0, 2)
         out2 = self.attn2(enc1_output, enc2_output, enc2_output, need_weights=False, attn_mask=None)[0]
         out2 = self.mlp2(self.ln_2(out2))
-        out = self.ln_final(torch.cat((out1, out2), dim=1))
+        out2 = out2.permute(1, 0, 2)
+        out = self.ln_final(torch.cat((out1, out2), dim=2))
+
+        ##TODO: now we are taking avg across patches -> out.shape (batch_size, width=768)
+        # we can also take <CLS> token like other scripts: `out = out[:,0,:]`, then linear
+        out = torch.mean(out, dim=1)
         out = self.linear1(out)
         out = self.linear2(out)
+        print(out.shape)
         return out
 
 
 test = VisionTransformer(224, 16, 768, 6, 8, 1)
 # from torchsummary import summary
 # summary(test, [(3, 224, 224), (3, 224, 224)])
-out = test(torch.randn(1,3,224,224), torch.randn(1,3,224,224))
+out = test(torch.randn(2,3,224,224), torch.randn(2,3,224,224))
+print(out)
