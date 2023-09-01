@@ -57,6 +57,7 @@ class ResidualAttentionBlockDec(nn.Module):
         ]))
         self.ln_2 = LayerNorm(d_model)
         self.ln_3 = LayerNorm(d_model)
+        self.ln_4 = LayerNorm(d_model)
         self.attn_mask = attn_mask
 
     def self_attention(self, x: torch.Tensor):
@@ -69,8 +70,8 @@ class ResidualAttentionBlockDec(nn.Module):
 
     def forward(self, x: torch.Tensor, enc_output: torch.Tensor):
         x = x + self.self_attention(self.ln_1(x))
-        x = x + self.cross_attention(self.ln_2(x), enc_output)
-        x = x + self.mlp(self.ln_3(x))
+        x = x + self.cross_attention(self.ln_2(x), self.ln_3(enc_output))
+        x = x + self.mlp(self.ln_4(x))
         return x
 
 class Encoder(nn.Module):
@@ -141,6 +142,8 @@ class Decoder(nn.Module):
 class VisionTransformer(nn.Module):
     def __init__(self, input_res: int, patch_size: int, width: int, layers: int, heads: int, output_dim: int):
         super().__init__()
+        self.ori_vit1 = Encoder(width, layers, heads, patch_size, input_res)
+        self.ori_vit2 = Encoder(width, layers, heads, patch_size, input_res)
         self.encoder = Encoder(width, layers, heads, patch_size, input_res)
         self.decoder = Decoder(width, layers, heads, patch_size, input_res)
 
@@ -150,14 +153,16 @@ class VisionTransformer(nn.Module):
 
     def forward(self, p1: torch.Tensor, p2): # x is a pair of (p1, p2)
         # p1, p2 = x
-        enc_output = self.encoder(p1)  #LND
-        dec_output = self.decoder(p2, enc_output)  #NLD
+        enc1_output = self.ori_vit1(p1)  #LND
+        enc2_output = self.ori_vit2(p2)  #LND
+        enc1_output_ext = self.encoder(enc1_output)  #LND
+        enc2_output_ext = self.decoder(enc2_output, enc1_output_ext)  #NLD
 
         ###TODO:
-        out = self.ln_post(dec_output[:, 0, :])
+        out = self.ln_post(enc2_output_ext[:, 0, :])
         out = self.final_layer(out)
         return out
-        # final_output = None
+
 test = VisionTransformer(224, 16, 768, 6, 8, 1)
 # from torchsummary import summary
 # summary(test, [(3, 224, 224), (3, 224, 224)])
