@@ -2,11 +2,11 @@ import sys
 
 sys.path.append("d:/Coding/CZ4041/CZ4041-kaggle")  # Set root
 
-import tqdm
 import torch
 import numpy as np
 import torch.nn as nn
 
+from tqdm import tqdm
 from torch import optim
 from src.config import Config
 from utils.dataloader import create_train_val_data_loader
