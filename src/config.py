@@ -13,7 +13,7 @@ class Config:
     train_test_split_ratio = 0.8
     
     # Model hyperparameters
-    batch_size = 64
+    batch_size = 32
     number_of_epochs = 100
     num_workers = 8
 
