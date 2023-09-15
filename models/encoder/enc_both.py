@@ -146,7 +146,7 @@ class VisionTransformer(nn.Module):
         self.ln_final = LayerNorm(width * 2)
         self.linear1 = nn.Linear(width * 2, width)
         self.linear2 = nn.Linear(width, output_dim)
-        self.sigmoid = nn.Sigmoid() 
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, p1: torch.Tensor, p2: torch.Tensor):  # x is a pair of (p1, p2)
         enc1_output = self.ori_vit1(p1)  # LND

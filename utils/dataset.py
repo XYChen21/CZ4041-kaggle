@@ -45,14 +45,14 @@ class FamilyDataset(Dataset):
         first = random.choice(os.listdir(pair[0]))
         second = random.choice(os.listdir(pair[1]))
 
-        img0 = Image.open(pair[0] + "/" + first)
-        img1 = Image.open(pair[1] + "/" + second)
+        img1 = Image.open(pair[0] + "/" + first)
+        img2 = Image.open(pair[1] + "/" + second)
 
         if self.transform is not None:
-            img0 = self.transform(img0)
             img1 = self.transform(img1)
+            img2 = self.transform(img2)
 
-        return idx, img0, img1, label
+        return idx, img1, img2, label
 
 
 class FamilyTestDataset(Dataset):
@@ -67,7 +67,7 @@ class FamilyTestDataset(Dataset):
                 on a sample.
         """
         self.relations = relations
-        self.root_dir = data_dir
+        self.data_dir = data_dir
         self.transform = transform
 
     def __len__(self) -> int:
@@ -75,22 +75,22 @@ class FamilyTestDataset(Dataset):
 
     def __getpair__(self, idx) -> Tuple[str, str]:
         pair = (
-            self.root_dir + self.relations.iloc[idx, 2],
-            self.root_dir + self.relations.iloc[idx, 3],
+            os.path.join(self.data_dir, self.relations.iloc[idx, 0].split("-")[0]),
+            os.path.join(self.data_dir + self.relations.iloc[idx, 0].split("-")[1]),
         )
         return pair
 
     def __getlabel__(self, idx) -> int:
-        return self.relations.iloc[idx, 4]
+        return self.relations.iloc[idx, 1]
 
     def __getitem__(self, idx) -> Tuple[int, Image.Image, Image.Image]:
         pair = self.__getpair__(idx)
 
-        img0 = Image.open(pair[0])
-        img1 = Image.open(pair[1])
+        img1 = Image.open(pair[0])
+        img2 = Image.open(pair[1])
 
         if self.transform is not None:
-            img0 = self.transform(img0)
             img1 = self.transform(img1)
+            img2 = self.transform(img2)
 
-        return idx, img0, img1
+        return idx, img1, img2

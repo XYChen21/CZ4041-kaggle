@@ -1,6 +1,8 @@
 import sys
-sys.path.append("d:/Coding/CZ4041/CZ4041-kaggle")   # Set root
 
+sys.path.append("d:/Coding/CZ4041/CZ4041-kaggle")  # Set root
+
+import tqdm
 import torch
 import numpy as np
 import torch.nn as nn
@@ -8,28 +10,46 @@ import torch.nn as nn
 from torch import optim
 from src.config import Config
 from utils.dataloader import create_train_val_data_loader
-from models.enc_both import VisionTransformer
+
+# Importing models
+from models.classifier.linear import LinearClassifier
+from transformers import ViTFeatureExtractor, ViTModel
+
+# OPTIONAL: For visualizing training metrics
+from torch.utils.tensorboard import SummaryWriter
 
 # REMOVE!
-CUDA = torch.cuda.is_available()
-assert CUDA == True
-
-TRAIN_IMAGE_DIR = "./data/train"
-TRAIN_RELATIONSHIP_FILE = (
-    "./data/train-relationships/train_relationships_processed.csv"
-)
-
-def load_weights():
-    pass
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Training on {device}!")
 
 
-def train(model, criterion, optimizer, train_loader, valid_loader):
-    train_counter = []
-    train_loss_history = []
+# TODO: Remove hardcoding, also transforms already performed
+def load_encoder():
+    model_name_or_path = "google/vit-base-patch16-224-in21k"
+    # feature_extractor = ViTFeatureExtractor.from_pretrained(model_name_or_path)
+    model = ViTModel.from_pretrained(model_name_or_path)
+    return model
+
+
+# TODO: Is this function needed?
+def load_classifier():
+    return LinearClassifier(input_size=768)
+
+
+# TODO: Is this function needed?
+def combine_embeddings(embedding1, embedding2):
+    return (embedding1 - embedding2) ** 2
+
+
+def train_classifier(
+    encoder, classifier, criterion, optimizer, train_loader, valid_loader
+):
+    # train_counter = []
+    # train_loss_history = []
     train_iteration_number = 0
 
-    valid_counter = []
-    valid_loss_history = []
+    # valid_counter = []
+    # valid_loss_history = []
     valid_iteration_number = 0
 
     valid_loss_min = np.Inf  # set initial "min" to infinity
@@ -40,20 +60,30 @@ def train(model, criterion, optimizer, train_loader, valid_loader):
     valid_class_correct = list(0 for i in range(2))
     valid_class_total = list(0 for i in range(2))
 
-    for epoch in range(0, Config.train_number_epochs):
+    for epoch in tqdm(range(Config.number_of_epochs)):
         valid_loss = 0.0
 
-        model.train()
-        for i, data in enumerate(train_loader, 0):
-            row, img0, img1, label = data
-            row, img0, img1, label = row.cuda(), img0.cuda(), img1.cuda(), label.cuda()
+        classifier.train()
+        for i, data in tqdm(enumerate(train_loader, 0)):
+            row, img1, img2, label = data
+            row, img1, img2, label = (
+                row.to(device),
+                img1.to(device),
+                img2.to(device),
+                label.to(device),
+            )
 
             optimizer.zero_grad()
-            output = model(img0, img1)
 
             # TODO: Confirm this with xy
-            # _, pred = torch.max(output, 1)
-            pred = (output >= 0.5).float()
+            # Using the CLS token embedding
+            x1 = encoder(img1).last_hidden_state[:, 0, :]
+            x2 = encoder(img2).last_hidden_state[:, 0, :]
+            x_combined = combine_embeddings(x1, x2)
+
+            output = classifier(x_combined)
+            _, pred = torch.max(output, 1)
+            #pred = (output >= 0.5).float()
 
             loss = criterion(output, label)
             loss.backward()
@@ -66,13 +96,16 @@ def train(model, criterion, optimizer, train_loader, valid_loader):
                 train_class_correct[target] += correct[j].item()
                 train_class_total[target] += 1
 
+            # OPTIONAL: For visualizing training metrics
+            writer.add_scalar("Loss/train", loss, epoch)
+
             if i % 30 == 0:
                 print(
                     "Epoch number {}\n Current loss {}\n".format(epoch + 1, loss.item())
                 )
                 train_iteration_number += 30
-                train_counter.append(train_iteration_number)
-                train_loss_history.append(loss.item())
+                # train_counter.append(train_iteration_number)
+                # train_loss_history.append(loss.item())
 
                 for i in range(2):
                     if train_class_total[i] > 0:
@@ -95,16 +128,25 @@ def train(model, criterion, optimizer, train_loader, valid_loader):
                     )
                 )
 
-        model.eval()
-        for i, data in enumerate(valid_loader, 0):
-            row, img0, img1, label = data
-            row, img0, img1, label = row.cuda(), img0.cuda(), img1.cuda(), label.cuda()
-
-            output = model(img0, img1)
+        classifier.eval()
+        for i, data in tqdm(enumerate(valid_loader, 0)):
+            row, img1, img2, label = data
+            row, img1, img2, label = (
+                row.to(device),
+                img1.to(device),
+                img2.to(device),
+                label.to(device),
+            )
 
             # TODO: Confirm this with xy
-            # _, pred = torch.max(output, 1)
-            pred = (output >= 0.5).float()
+            # Using the CLS token embedding
+            x1 = encoder(img1).last_hidden_state[:, 0, :]
+            x2 = encoder(img2).last_hidden_state[:, 0, :]
+            x_combined = combine_embeddings(x1, x2)
+
+            output = classifier(x_combined)
+            _, pred = torch.max(output, 1)
+            #pred = (output >= 0.5).float()
 
             loss = criterion(output, label)
 
@@ -121,8 +163,8 @@ def train(model, criterion, optimizer, train_loader, valid_loader):
                     "Epoch number {}\n Current loss {}\n".format(epoch + 1, loss.item())
                 )
                 valid_iteration_number += 30
-                valid_counter.append(valid_iteration_number)
-                valid_loss_history.append(loss.item())
+                # valid_counter.append(valid_iteration_number)
+                # valid_loss_history.append(loss.item())
 
                 for i in range(2):
                     if train_class_total[i] > 0:
@@ -151,24 +193,39 @@ def train(model, criterion, optimizer, train_loader, valid_loader):
                     valid_loss_min, valid_loss
                 )
             )
-            torch.save(model.state_dict(), "/checkpoints/model.pt")
+            torch.save(classifier.state_dict(), "./checkpoints/Linear_Classifier_1.pt")
             valid_loss_min = valid_loss
+    
+    # OPTIONAL: For visualizing training metrics
+    writer.close()
 
 
 if __name__ == "__main__":
-    enc_both = VisionTransformer(224, 16, 768, 6, 8, 1)
+    encoder = load_encoder().to(device)
+    classifier = load_classifier().to(device)
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(enc_both.parameters(), lr=0.008, momentum=0.9)
-
-    train_load, valid_load = create_train_val_data_loader(
-        TRAIN_IMAGE_DIR, TRAIN_RELATIONSHIP_FILE
+    optimizer = optim.SGD(
+        classifier.parameters(), lr=Config.learning_rate, momentum=Config.momentum
     )
 
-    train(
-        model=enc_both,
+    train_loader, valid_loader = create_train_val_data_loader(
+        Config.train_image_dir,
+        Config.train_relationship_file,
+        Config.train_test_split_ratio,
+    )
+    
+    
+    # OPTIONAL: For visualizing training metrics
+    writer = SummaryWriter()
+
+    train_classifier(
+        encoder=encoder,
+        classifier=classifier,
         criterion=criterion,
         optimizer=optimizer,
-        train_loader=train_load,
-        valid_loader=valid_load,
+        train_loader=train_loader,
+        valid_loader=valid_loader,
     )
+
+    writer.close()
