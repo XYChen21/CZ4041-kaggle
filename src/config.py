@@ -18,5 +18,4 @@ class Config:
     num_workers = 0
 
     # Optimizer parameters
-    learning_rate = 0.008
-    momentum = 0.9
+    learning_rate = 0.005

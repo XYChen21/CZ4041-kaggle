@@ -10,7 +10,6 @@ import torch.nn as nn
 from tqdm import tqdm
 from torch import optim
 from src.config import Config
-from torchsummary import summary
 from utils.dataloader import create_train_val_data_loader
 
 # Importing models
@@ -90,7 +89,7 @@ def train_classifier(
             # pred = (output >= 0.5).float()
 
             loss = criterion(output, label)
-            loss.backward() # This takes wayy too long
+            loss.backward()    # Investigate why this takes way too long.
 
             optimizer.step()
 
