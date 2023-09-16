@@ -13,9 +13,9 @@ class Config:
     train_test_split_ratio = 0.8
     
     # Model hyperparameters
-    batch_size = 32
-    number_of_epochs = 100
-    num_workers = 8
+    batch_size = 8
+    number_of_epochs = 10
+    num_workers = 0
 
     # Optimizer parameters
     learning_rate = 0.008

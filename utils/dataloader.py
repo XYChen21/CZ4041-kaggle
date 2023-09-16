@@ -19,7 +19,7 @@ def create_train_val_data_loader(
             transforms.CenterCrop(224),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
-            transforms.Normalize([0.5], [0.5]),
+            transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5]),
         ]
     )
 
@@ -28,7 +28,7 @@ def create_train_val_data_loader(
             transforms.Resize(255),
             transforms.CenterCrop(224),
             transforms.ToTensor(),
-            transforms.Normalize([0.5], [0.5]),
+            transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5]),
         ]
     )
 
@@ -65,7 +65,7 @@ def create_test_dataloader(test_image_dir: str, test_relationship_file: str):
             transforms.Resize(255),
             transforms.CenterCrop(224),
             transforms.ToTensor(),
-            transforms.Normalize([0.5], [0.5]),
+            transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5]),
         ]
     )
 
