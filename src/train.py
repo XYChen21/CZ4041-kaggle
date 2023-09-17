@@ -1,5 +1,4 @@
 import sys
-import time
 
 sys.path.append("d:/Coding/CZ4041/CZ4041-kaggle")  # Set root
 
@@ -38,9 +37,8 @@ def load_classifier():
     return model
 
 
-# TODO: Is this function needed?
-def combine_embeddings(embedding1, embedding2):
-    return (embedding1 - embedding2) ** 2
+def combine_embeddings(x1, x2):
+    return torch.pow(torch.sub(x1, x2), 2)
 
 
 def train_classifier(
@@ -78,20 +76,48 @@ def train_classifier(
 
             optimizer.zero_grad()
 
+            start1 = torch.cuda.Event(enable_timing=True)
+            end1 = torch.cuda.Event(enable_timing=True)
+
+            start1.record()
             # TODO: Confirm this with xy
             # Using the CLS token embedding
             x1 = encoder(img1).last_hidden_state[:, 0, :]
             x2 = encoder(img2).last_hidden_state[:, 0, :]
             x_combined = combine_embeddings(x1, x2)
+            end1.record()
+            torch.cuda.synchronize()
+            print(f"Encoder Time {start1.elapsed_time(end1)} ms")
 
+            start2 = torch.cuda.Event(enable_timing=True)
+            end2 = torch.cuda.Event(enable_timing=True)
+
+            start2.record()
             output = classifier(x_combined)
             _, pred = torch.max(output, 1)
             # pred = (output >= 0.5).float()
+            end2.record()
+            torch.cuda.synchronize()
+            print(f"Forward Time {start2.elapsed_time(end2)} ms")
 
+            start3 = torch.cuda.Event(enable_timing=True)
+            end3 = torch.cuda.Event(enable_timing=True)
+
+            start3.record()
             loss = criterion(output, label)
-            loss.backward()    # Investigate why this takes way too long.
+            loss.backward()  # Investigate why this takes way too long.
+            end3.record()
+            torch.cuda.synchronize()
+            print(f"Backward Time {start3.elapsed_time(end3)} ms")
 
+            start4 = torch.cuda.Event(enable_timing=True)
+            end4 = torch.cuda.Event(enable_timing=True)
+
+            start4.record()
             optimizer.step()
+            end4.record()
+            torch.cuda.synchronize()
+            print(f"Optimizer Step Time {start4.elapsed_time(end4)} ms")
 
             correct = pred.eq(label.view_as(pred))
             for j in range(len(label)):
@@ -112,7 +138,7 @@ def train_classifier(
                 for i in range(2):
                     if train_class_total[i] > 0:
                         print(
-                            "\nTraining Accuracy of %5s: %2d%% (%2d/%2d)"
+                            "Training Accuracy of %5s: %2d%% (%2d/%2d)"
                             % (
                                 str(i),
                                 100 * train_class_correct[i] / train_class_total[i],
@@ -122,7 +148,7 @@ def train_classifier(
                         )
 
                 print(
-                    "\nTraining Accuracy (Overall): %2d%% (%2d/%2d)"
+                    "\nTraining Accuracy (Overall): %2d%% (%2d/%2d)\n"
                     % (
                         100.0 * np.sum(train_class_correct) / np.sum(train_class_total),
                         np.sum(train_class_correct),
@@ -133,7 +159,7 @@ def train_classifier(
         writer.add_scalar("Loss/train", train_loss, epoch)  # OPTIONAL
 
         classifier.eval()
-        for i, data in enumerate(valid_loader, 0):
+        for i, data in enumerate(valid_loader):
             row, img1, img2, label = data
             row, img1, img2, label = (
                 row.to(device),

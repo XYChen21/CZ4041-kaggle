@@ -29,42 +29,58 @@ def load_encoder():
 
 
 # TODO: Is this function needed?
-def load_classifier(path_to_weights: str):
+def load_classifier(path_to_model_weights: str):
     model = LinearClassifier(input_size=768)
-    model.load_state_dict(torch.load(path_to_weights))
+    model.load_state_dict(torch.load(path_to_model_weights))
     return model
 
 
-# TODO: Complete
+def combine_embeddings(x1, x2):
+    return torch.pow(torch.sub(x1, x2), 2)
+
+
 def create_submission(path_to_template: str, path_to_save: str, predictions):
     template = pd.read_csv(path_to_template)
-    pass
+
+    # Remember to save as floats as metric is AUC
+    for row, pred in predictions.items():
+        template.loc[row, "is_related"] = pred.astype(float)
+
+    template.to_csv(path_or_buf=path_to_save, index=False)
+    return
 
 
 def test_classifier(encoder, classifier, test_loader):
-    predictions = []
+    predictions = {}
+
+    encoder.to(device)
+    classifier.to(device)
 
     classifier.eval()
-    for i, data in tqdm(enumerate(test_loader, 0)):
+    for i, data in tqdm(enumerate(test_loader)):
         row, img1, img2 = data
         row, img1, img2 = row.to(device), img1.to(device), img2.to(device)
 
-        output1 = vggnet(img0, img1)
-        output = net(output1)
-        # output= net(img0,img1)
+        x1 = encoder(img1).last_hidden_state[:, 0, :]
+        x2 = encoder(img2).last_hidden_state[:, 0, :]
+        x_combined = combine_embeddings(x1, x2)
+
+        output = classifier(x_combined)
         _, pred = torch.max(output, 1)
 
-        # count = 0
-        # for item in row:
-        #     sample_submission.loc[item, "is_related"] = pred[count].item()
-        #     count += 1
+        for i in range(len(row)):
+            predictions[row[i].item] = pred[i].item()
 
     return predictions
 
 
 if __name__ == "__main__":
-    encoder = load_encoder().to(device)
-    classifier = load_classifier().to(device)
+    path_to_model_weights = "./checkpoints/Linear_Classifier_1"
+    path_to_template = "./data/submissions/sample_submission.csv"
+    path_to_save = "./data/submissions/Submission_1"
+
+    encoder = load_encoder()
+    classifier = load_classifier(path_to_model_weights)
 
     test_loader = create_test_dataloader(
         Config.test_image_dir,
@@ -75,4 +91,8 @@ if __name__ == "__main__":
         encoder=encoder, classifier=classifier, test_loader=test_loader
     )
 
-    create_submission()
+    create_submission(
+        path_to_template=path_to_template,
+        path_to_save=path_to_save,
+        predictions=predictions,
+    )
