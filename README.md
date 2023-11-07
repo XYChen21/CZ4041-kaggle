@@ -16,7 +16,7 @@ csv files in `submission` folder
 |m1| Fixed ViT weights|
 |m2| Finetune last attention layer of ViT|
 |m3| Randomly choose a layer to finetune for 10 epochs, creating new optimizer each time|
-|m4| Randomly choose a layer to finetune for 10 epochs, by only chaning `.require_grad_(True/False)`|
+|m4| Randomly choose a layer to finetune for 10 epochs, by only changing `.require_grad_(True/False)`|
 |m5|ViT with techniques in m4 + ResNet with AttentionPool|
 |m6|ViT with contrastive loss (all layers trained)|
 |m7|ViT with added Linear projections in each Attention|
