@@ -1,5 +1,5 @@
 # CZ4041-kaggle
-Each models are saved based on best val acc and val loss. Link to models by clicking the AUC number  
+Each model is saved based on best val acc and val loss. Link to models by clicking the AUC number  
 csv files in `submission` folder
 |ID| name | best_acc_AUC| best_loss_AUC|
 |--| ---- | ----------- | ------------ |
