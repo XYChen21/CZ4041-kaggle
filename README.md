@@ -9,7 +9,7 @@ csv files in `submission` folder
 |m4| m4_vit_randomtune2 | [**0.895**](https://drive.google.com/file/d/1yWE8AJVqGqLroIdj_yD3b0Q81zBvj8bR/view?usp=share_link) | [**0.878**](https://drive.google.com/file/d/1zLAQzXTD9XfnhNfLyPdiurY_9tBMPsKm/view?usp=sharing) |
 |m5| m5_vitcnn_attnpool | [**0.874**](https://drive.google.com/file/d/1dBSRHT1_N7KM--KktLACAXyRUFOv09tO/view?usp=sharing)  | [**0.871**](https://drive.google.com/file/d/17DE2CDeJHSG5M3tBQVoLqh439v_-i3oS/view?usp=sharing) |
 |m6| m6_vit_contrastive | [0.813](https://drive.google.com/file/d/1-AJC7L0XUshY1zlx6Fvh_X9qLkbATcj_/view?usp=sharing) | [0.813](https://drive.google.com/file/d/1vBs_8QgHO6itU14Xw_2iRfQVgd89NjsG/view?usp=sharing) |
-|m7| m7_vit_crossattn | [0.67](https://drive.google.com/file/d/15Kn7i9Fjm6L6tDMQ_Cocrl8HKIlBBVts/view?usp=share_link) | [0.67](https://drive.google.com/file/d/1Nwp_vLsfldud28YOuUvbVD_L0goRsidP/view?usp=share_link) |
+|m7| m7_vit_crossattn | [0.737](https://drive.google.com/file/d/1OXLd8Pitgf1lkuJYA0nX9hwZkPRpxcK_/view?usp=sharing) | [0.739](https://drive.google.com/file/d/1V_a6Pu_rJFBaGLkqxW10WucV-5C15M7C/view?usp=sharing) |
 
 |ID| Explanation |
 |--| ----------- |
